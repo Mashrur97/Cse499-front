@@ -13,7 +13,7 @@ function Markdown({ text }) {
 export default function Pane({ gpu, name, highlight, data, streaming, stopped, offline, placeholder, showCertainty }) {
   const { text, tokens, done, hit_limit, certainty, tok_per_s } = data
   const writing = streaming && !done && !!text
-  const statusText = offline ? 'offline' : stopped && !done && text ? `${tokens} tok · stopped by you` : hit_limit ? `${tokens} tok · limit hit` : done ? `${tokens} tok · stopped` : writing ? `${tokens} tok · writing` : 'ready'
+  const statusText = offline ? '' : stopped && !done && text ? `${tokens} tok · stopped by you` : hit_limit ? `${tokens} tok · limit hit` : done ? `${tokens} tok · stopped` : writing ? `${tokens} tok · writing` : ''
   const statusColor = offline ? 'text-faint' : hit_limit ? 'text-amber' : 'text-faint'
   const pct = certainty == null ? 0 : Math.round(certainty * 100)
 
@@ -36,11 +36,13 @@ export default function Pane({ gpu, name, highlight, data, streaming, stopped, o
             {writing && <span className="cursor" aria-hidden="true" />}
           </>
         ) : (
-          <p className="m-0 font-mono text-sm text-faint">{placeholder}</p>
+          <div className="flex h-full min-h-[188px] items-center justify-center">
+            <span className="text-sm text-faint">{placeholder}</span>
+          </div>
         )}
       </div>
 
-      <footer className="px-[18px] pb-4">
+      <footer className={`px-[18px] pb-4 ${tokens || showCertainty ? '' : 'invisible'}`}>
         {showCertainty && (
           <div className="mb-1.5 h-1 rounded-sm bg-line">
             <div className={`h-1 rounded-sm transition-[width] duration-300 ${highlight ? 'bg-lime' : 'bg-amber'}`} style={{ width: `${pct}%` }} />

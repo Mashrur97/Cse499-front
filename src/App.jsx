@@ -16,7 +16,7 @@ function StatusPill({ link }) {
 
 export default function App() {
   const { link, reply, phase, queuePos, error, busy, ask, stop } = useBackend()
-  const [msg, setMsg] = useState(EXAMPLES[0].text)
+  const [msg, setMsg] = useState('')
   const [baseSys, setBaseSys] = useState(false)
   const [showCert, setShowCert] = useState(false)
   const offline = link.state !== 'online'
@@ -29,7 +29,7 @@ export default function App() {
   const waitingNote =
     phase === 'connecting' ? 'connecting to the GPUs…' :
     phase === 'queued' ? `in queue · position ${queuePos}` : null
-  const placeholder = offline ? '// backend offline' : waitingNote ? `// ${waitingNote}` : '// waiting for a message'
+  const placeholder = offline ? 'offline' : waitingNote || 'replies appear here'
 
   return (
     <div className="min-h-screen bg-ink">
@@ -39,7 +39,8 @@ export default function App() {
           <a href="#top" className="font-mono text-[15px] text-lime no-underline">banglish-4b <span className="text-faint">/ demo</span></a>
           <nav className="flex flex-wrap items-center gap-6 font-mono text-[13px]">
             <a href="#try" className="text-muted no-underline hover:text-lime">try_it</a>
-            <a href="#how" className="text-muted no-underline hover:text-lime">how_it_works</a>
+            <a href="#results" className="hidden text-muted no-underline hover:text-lime sm:inline">results</a>
+            <a href="#how" className="hidden text-muted no-underline hover:text-lime sm:inline">how_it_works</a>
             <StatusPill link={link} />
           </nav>
         </div>
@@ -48,25 +49,27 @@ export default function App() {
       {/* ── hero ── */}
       <section id="top" className="relative">
         <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
-        <div className="relative mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-14 pb-9 sm:px-8 sm:pt-16">
-          <span className="font-mono text-[13px] text-faint">// qwen3-4b vs qwen3-4b + our adapter · greedy · same prompt</span>
-          <h1 className="m-0 max-w-[900px] font-display text-[44px] leading-[1.02] font-bold tracking-[-.03em] sm:text-[64px] lg:text-[76px]">
-            One question.<br />Two models. <span className="text-lime">One speaks Banglish.</span>
+        <div className="relative mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
+          <span className="font-mono text-[13px] text-faint">// nsu cse 499 · qwen3-4b, before and after our training</span>
+          <h1 className="m-0 max-w-[860px] font-display text-[40px] leading-[1.04] font-bold tracking-[-.03em] sm:text-[56px] lg:text-[64px]">
+            One question. Two models.<br /><span className="text-lime">One speaks Banglish.</span>
           </h1>
-          <div className="mt-2 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-            {STATS.map(s => (
-              <div key={s.key} className="flex min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-raise px-4 py-3.5 sm:min-w-[190px]">
-                <span className="font-mono text-xs text-faint">{s.key}</span>
-                <span className="font-display text-[22px] font-bold sm:text-[28px]">{s.value}</span>
-                <span className="text-xs text-muted">{s.note}</span>
-              </div>
-            ))}
+          <p className="m-0 max-w-[600px] text-[17px] leading-[1.6] text-muted">
+            Ask anything in Banglish. The original Qwen3-4B and our fine-tuned version answer side by side, live, on two GPUs.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <a href="#try" className="rounded-[9px] bg-lime px-5 py-3 text-[15px] font-semibold text-ink no-underline transition hover:bg-lime-2">Try it ↓</a>
+            <a href="#results" className="rounded-[9px] border border-line-2 px-5 py-3 font-mono text-[14px] text-muted no-underline transition hover:border-lime-deep hover:text-lime">results</a>
           </div>
         </div>
       </section>
 
       {/* ── live demo ── */}
-      <section id="try" className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 pt-3 pb-10 sm:px-8">
+      <section id="try" className="mx-auto flex max-w-[1180px] scroll-mt-6 flex-col gap-4 px-4 pb-20 sm:px-8">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="m-0 font-display text-[26px] font-bold">Live demo</h2>
+          <span className="font-mono text-xs text-faint">same message · same settings · greedy</span>
+        </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Pane gpu="gpu0" name="qwen3-4b (original)" data={reply.original} streaming={streaming} stopped={stopped} offline={offline} placeholder={placeholder} showCertainty={showCert} />
           <Pane gpu="gpu1" name="ours (CWH+-D)" highlight data={reply.ours} streaming={streaming} stopped={stopped} offline={offline} placeholder={placeholder} showCertainty={showCert} />
@@ -89,7 +92,7 @@ export default function App() {
             <label htmlFor="msg" className="sr-only">Your message (Banglish)</label>
             <input
               id="msg" value={msg} maxLength={MAX_CHARS} onChange={e => setMsg(e.target.value)} disabled={offline}
-              placeholder="banglish e kichu likho…" autoComplete="off"
+              placeholder="Ask anything in Banglish… e.g. ki obostha bhai?" autoComplete="off"
               className="min-w-0 flex-1 border-0 bg-transparent py-3 font-mono text-[15px] text-text outline-none placeholder:text-faint disabled:opacity-50"
             />
           </div>
@@ -134,8 +137,26 @@ export default function App() {
         </p>
       </section>
 
+      {/* ── results ── */}
+      <section id="results" className="border-t border-line">
+        <div className="mx-auto flex max-w-[1180px] scroll-mt-6 flex-col gap-5 px-4 py-16 sm:px-8">
+          <h2 className="m-0 font-display text-[26px] font-bold">Results</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {STATS.map(s => (
+              <div key={s.key} className="flex min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-raise px-4 py-4">
+                <span className="font-mono text-xs text-faint">{s.key}</span>
+                <span className="font-display text-[22px] font-bold sm:text-[30px]">{s.value}</span>
+                <span className="text-xs text-muted">{s.note}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── how it works ── */}
-      <section id="how" className="mx-auto grid max-w-[1180px] grid-cols-1 gap-4 px-4 pt-6 pb-16 sm:px-8 md:grid-cols-3">
+      <section id="how" className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pb-20 sm:px-8">
+        <h2 className="m-0 font-display text-[26px] font-bold">How it works</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           ['01 data', '172k Banglish rows', 'Real Banglish chat, Wikipedia-grounded Q&A and premise-checking examples, written with Gemini as the teacher.'],
           ['02 train', 'QLoRA on 2 × T4', 'A small add-on (0.8% extra weights) on Qwen3-4B. Ten controlled variants; the winner picked by a rule fixed in advance.'],
@@ -147,6 +168,7 @@ export default function App() {
             <span className="text-[15px] leading-[1.55] text-muted">{d}</span>
           </div>
         ))}
+        </div>
       </section>
 
       <footer className="border-t border-line">
