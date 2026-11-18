@@ -45,9 +45,9 @@ void main(){
   vec3 lime = vec3(0.714, 0.953, 0.416);
   vec3 teal = vec3(0.176, 0.831, 0.749);
   vec3 col = ink;
-  col += lime * band1 * rays * (0.35 + 0.65 * n) * 0.40;
-  col += teal * band2 * rays * (0.35 + 0.65 * q.y) * 0.50;
-  col += mix(teal, lime, uv.x) * 0.035 * smoothstep(0.3, 1.0, n);      // faint overall glow
+  col += lime * band1 * rays * (0.35 + 0.65 * n) * 0.24;
+  col += teal * band2 * rays * (0.35 + 0.65 * q.y) * 0.30;
+  col += mix(teal, lime, uv.x) * 0.02 * smoothstep(0.3, 1.0, n);      // faint overall glow
 
   col = mix(ink, col, smoothstep(0.05, 0.50, uv.y));                    // fade into the page colour below (no dark seam)
   gl_FragColor = vec4(col, 1.0);

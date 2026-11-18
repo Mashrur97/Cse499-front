@@ -10,7 +10,7 @@ function StatusPill({ link }) {
   return (
     <span className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-[13px] ${on ? 'border-lime-deep text-lime' : 'border-line-2 text-faint'}`}>
       <span className={`h-[7px] w-[7px] rounded-full ${on ? 'pulse-dot bg-lime' : 'bg-faint'}`} />
-      <span className="hidden sm:inline">gpu0 + gpu1&nbsp;</span>{label}
+      <span className="hidden sm:inline">{'gpu0 + gpu1 '}</span>{label}
     </span>
   )
 }
