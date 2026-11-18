@@ -6,11 +6,11 @@ import Aurora from './components/Aurora.jsx'
 
 function StatusPill({ link }) {
   const on = link.state === 'online'
-  const label = link.state === 'checking' ? 'checking backend…' : on ? 'gpu0 + gpu1 online' : 'gpu0 + gpu1 offline'
+  const label = link.state === 'checking' ? 'checking…' : on ? 'online' : 'offline'
   return (
     <span className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-[13px] ${on ? 'border-lime-deep text-lime' : 'border-line-2 text-faint'}`}>
       <span className={`h-[7px] w-[7px] rounded-full ${on ? 'pulse-dot bg-lime' : 'bg-faint'}`} />
-      {label}
+      <span className="hidden sm:inline">gpu0 + gpu1&nbsp;</span>{label}
     </span>
   )
 }
@@ -36,10 +36,10 @@ export default function App() {
     <div className="min-h-screen bg-ink">
       {/* ── nav ── */}
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
-          <a href="#top" className="font-mono text-[15px] text-lime no-underline">banglish-4b <span className="text-faint">/ demo</span></a>
-          <nav className="flex flex-wrap items-center gap-6 font-mono text-[13px]">
-            <a href="#try" className="text-muted no-underline hover:text-lime">try_it</a>
+        <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
+          <a href="#top" className="shrink-0 font-mono text-[15px] text-lime no-underline">banglish-4b <span className="text-faint">/ demo</span></a>
+          <nav className="flex items-center gap-6 font-mono text-[13px]">
+            <a href="#try" className="hidden text-muted no-underline hover:text-lime sm:inline">try_it</a>
             <a href="#results" className="hidden text-muted no-underline hover:text-lime sm:inline">results</a>
             <a href="#how" className="hidden text-muted no-underline hover:text-lime sm:inline">how_it_works</a>
             <StatusPill link={link} />
