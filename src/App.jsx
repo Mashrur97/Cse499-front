@@ -135,6 +135,7 @@ export default function App() {
         </div>
         <p className="m-0 text-[13px] leading-relaxed text-faint">
           Both run greedy (always the most likely next word), so the same message gives the same reply.
+          Messages and replies are saved anonymously for our research.
           {showCert && <> Certainty = how sure each model was about its wording, <span className="text-muted">not</span> whether the answer is right.</>}
         </p>
       </section>
