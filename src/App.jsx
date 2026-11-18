@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBackend, ago } from './useBackend.js'
 import { EXAMPLES, STATS, MAX_CHARS } from './config.js'
 import Pane from './components/Pane.jsx'
 import Aurora from './components/Aurora.jsx'
+import PastChats from './components/PastChats.jsx'
 
 function StatusPill({ link }) {
   const on = link.state === 'online'
@@ -15,7 +16,22 @@ function StatusPill({ link }) {
   )
 }
 
+function useHashPage() {
+  const get = () => (window.location.hash === '#history' ? 'history' : 'demo')
+  const [page, setPage] = useState(get)
+  useEffect(() => {
+    const on = () => {
+      const p = get(); setPage(p)
+      if (p === 'history') window.scrollTo(0, 0)
+      else requestAnimationFrame(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView())
+    }
+    window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on)
+  }, [])
+  return page
+}
+
 export default function App() {
+  const page = useHashPage()
   const { link, reply, phase, queuePos, error, busy, ask, stop } = useBackend()
   const [msg, setMsg] = useState('')
   const [baseSys, setBaseSys] = useState(false)
@@ -37,16 +53,19 @@ export default function App() {
       {/* ── nav ── */}
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
-          <a href="#top" className="shrink-0 font-mono text-[15px] text-lime no-underline">banglish-4b <span className="text-faint">/ demo</span></a>
-          <nav className="flex items-center gap-6 font-mono text-[13px]">
+          <a href="#top" className="shrink-0 font-mono text-[15px] text-lime no-underline">banglish-4b<span className="hidden text-faint sm:inline"> / demo</span></a>
+          <nav className="flex items-center gap-4 font-mono text-[13px] sm:gap-6">
             <a href="#try" className="hidden text-muted no-underline hover:text-lime sm:inline">try_it</a>
             <a href="#results" className="hidden text-muted no-underline hover:text-lime sm:inline">results</a>
             <a href="#how" className="hidden text-muted no-underline hover:text-lime sm:inline">how_it_works</a>
+            <a href="#history" className={`no-underline hover:text-lime ${page === 'history' ? 'text-lime' : 'text-muted'}`}>past_chats</a>
             <StatusPill link={link} />
           </nav>
         </div>
       </header>
 
+      {page === 'history' ? <PastChats /> : (
+      <>
       {/* ── hero ── */}
       <section id="top" className="relative overflow-hidden">
         <Aurora />
@@ -135,7 +154,7 @@ export default function App() {
         </div>
         <p className="m-0 text-[13px] leading-relaxed text-faint">
           Both run greedy (always the most likely next word), so the same message gives the same reply.
-          Messages and replies are saved anonymously for our research.
+          Messages and replies are saved anonymously for our research and shown in <a href="#history" className="text-muted underline decoration-line-2 underline-offset-2 hover:text-lime">past chats</a>.
           {showCert && <> Certainty = how sure each model was about its wording, <span className="text-muted">not</span> whether the answer is right.</>}
         </p>
       </section>
@@ -173,6 +192,9 @@ export default function App() {
         ))}
         </div>
       </section>
+
+      </>
+      )}
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-[1180px] flex-wrap justify-between gap-3 px-4 py-6 font-mono text-xs text-faint sm:px-8">

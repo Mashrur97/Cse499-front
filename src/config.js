@@ -23,3 +23,7 @@ export const STATS = [
   { key: 'train_rows', value: '172,128', note: 'Banglish examples' },
   { key: 'phone_size', value: '2.5 GB', note: 'runs offline' },
 ]
+
+// Past chats: the Kaggle backend uploads every chat to this HF dataset (must be PUBLIC for the site to read it).
+export const LOGS_REPO = import.meta.env.VITE_LOGS_REPO || 'mashrur991/banglish-demo-logs'
+export const LOGS_API = import.meta.env.VITE_LOGS_API || 'https://huggingface.co'

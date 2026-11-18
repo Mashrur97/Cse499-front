@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-function Markdown({ text }) {
+export function Markdown({ text }) {
   const html = useMemo(() => DOMPurify.sanitize(marked.parse(text || '')), [text])
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />
 }
