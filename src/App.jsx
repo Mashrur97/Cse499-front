@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBackend, ago } from './useBackend.js'
 import { EXAMPLES, STATS, MAX_CHARS } from './config.js'
 import Pane from './components/Pane.jsx'
+import Aurora from './components/Aurora.jsx'
 
 function StatusPill({ link }) {
   const on = link.state === 'online'
@@ -47,7 +48,8 @@ export default function App() {
       </header>
 
       {/* ── hero ── */}
-      <section id="top" className="relative">
+      <section id="top" className="relative overflow-hidden">
+        <Aurora />
         <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="relative mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
           <span className="font-mono text-[13px] text-faint">// nsu cse 499 · qwen3-4b, before and after our training</span>
