@@ -18,10 +18,11 @@ export const EXAMPLES = [
 
 // Results from our evaluation (186 knowledge questions; see the project guide)
 export const STATS = [
-  { key: 'knowledge_bn', value: '69.4 → 81.7%', note: 'questions right in Banglish' },
-  { key: 'p_value', value: '0.0008', note: 'vs the original (McNemar)' },
-  { key: 'train_rows', value: '172,128', note: 'Banglish examples' },
-  { key: 'phone_size', value: '2.5 GB', note: 'runs offline' },
+  // count: animated part (from → to); prefix/suffix stay still
+  { key: 'knowledge_bn', prefix: '69.4 → ', count: { from: 69.4, to: 81.7, decimals: 1 }, suffix: '%', note: 'questions right in Banglish' },
+  { key: 'p_value', count: { from: 1, to: 0.0008, decimals: 4 }, note: 'vs the original (McNemar)' },
+  { key: 'train_rows', count: { from: 0, to: 172128, decimals: 0, sep: true }, note: 'Banglish examples' },
+  { key: 'phone_size', count: { from: 0, to: 2.5, decimals: 1 }, suffix: ' GB', note: 'runs offline' },
 ]
 
 // Past chats: the Kaggle backend uploads every chat to this HF dataset (must be PUBLIC for the site to read it).

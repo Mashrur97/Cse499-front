@@ -4,6 +4,7 @@ import { EXAMPLES, STATS, MAX_CHARS } from './config.js'
 import Pane from './components/Pane.jsx'
 import Aurora from './components/Aurora.jsx'
 import PastChats from './components/PastChats.jsx'
+import CountUp from './components/CountUp.jsx'
 
 function StatusPill({ link }) {
   const on = link.state === 'online'
@@ -167,7 +168,7 @@ export default function App() {
             {STATS.map(s => (
               <div key={s.key} className="flex min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-raise px-4 py-4">
                 <span className="font-mono text-xs text-faint">{s.key}</span>
-                <span className="font-display text-[22px] font-bold sm:text-[30px]">{s.value}</span>
+                <span className="font-display text-[22px] font-bold sm:text-[30px]"><CountUp count={s.count} prefix={s.prefix} suffix={s.suffix} /></span>
                 <span className="text-xs text-muted">{s.note}</span>
               </div>
             ))}
