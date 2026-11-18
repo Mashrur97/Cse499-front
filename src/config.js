@@ -18,11 +18,11 @@ export const EXAMPLES = [
 
 // Results from our evaluation (186 knowledge questions; see the project guide)
 export const STATS = [
-  // count: animated part (from → to); prefix/suffix stay still
-  { key: 'knowledge_bn', prefix: '69.4 → ', count: { from: 69.4, to: 81.7, decimals: 1 }, suffix: '%', note: 'questions right in Banglish' },
-  { key: 'p_value', count: { from: 1, to: 0.0008, decimals: 4 }, note: 'vs the original (McNemar)' },
-  { key: 'train_rows', count: { from: 0, to: 172128, decimals: 0, sep: true }, note: 'Banglish examples' },
-  { key: 'phone_size', count: { from: 0, to: 2.5, decimals: 1 }, suffix: ' GB', note: 'runs offline' },
+  // parts: plain strings stay still; {from, to, decimals, delay} pieces count when the box scrolls into view
+  { key: 'knowledge_bn', parts: [{ from: 0, to: 69.4, decimals: 1 }, ' → ', { from: 69.4, to: 81.7, decimals: 1, delay: 1900 }, '%'], note: 'questions right in Banglish' },
+  { key: 'p_value', parts: [{ from: 1, to: 0.0008, decimals: 4 }], note: 'vs the original (McNemar)' },
+  { key: 'train_rows', parts: [{ from: 0, to: 172128, decimals: 0, sep: true }], note: 'Banglish examples' },
+  { key: 'phone_size', parts: [{ from: 0, to: 2.5, decimals: 1 }, ' GB'], note: 'runs offline' },
 ]
 
 // Past chats: the Kaggle backend uploads every chat to this HF dataset (must be PUBLIC for the site to read it).

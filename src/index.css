@@ -39,6 +39,11 @@ body { margin: 0; background: var(--color-ink); color: var(--color-text); font-f
 @keyframes pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .cursor, .pulse-dot { animation: none; } html { scroll-behavior: auto; } }
 
+/* hero title: words rise in with a blur-to-sharp, then line 2 types out */
+.hero-word { opacity: 0; transform: translateY(18px); filter: blur(8px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes rise { to { opacity: 1; transform: none; filter: blur(0); } }
+.hero-cursor { width: .45em; height: .82em; vertical-align: -0.04em; margin-left: 4px; }
+
 /* Markdown inside replies (the original model writes Markdown; render it so formatting doesn't bias the comparison) */
 .md p { margin: 0 0 .7em; }
 .md p:last-child { margin-bottom: 0; }

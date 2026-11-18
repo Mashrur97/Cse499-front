@@ -5,6 +5,7 @@ import Pane from './components/Pane.jsx'
 import Aurora from './components/Aurora.jsx'
 import PastChats from './components/PastChats.jsx'
 import CountUp from './components/CountUp.jsx'
+import HeroTitle from './components/HeroTitle.jsx'
 
 function StatusPill({ link }) {
   const on = link.state === 'online'
@@ -56,9 +57,6 @@ export default function App() {
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
           <a href="#top" className="shrink-0 font-mono text-[15px] text-lime no-underline">banglish-4b<span className="hidden text-faint sm:inline"> / demo</span></a>
           <nav className="flex items-center gap-4 font-mono text-[13px] sm:gap-6">
-            <a href="#try" className="hidden text-muted no-underline hover:text-lime sm:inline">try_it</a>
-            <a href="#results" className="hidden text-muted no-underline hover:text-lime sm:inline">results</a>
-            <a href="#how" className="hidden text-muted no-underline hover:text-lime sm:inline">how_it_works</a>
             <a href="#history" className={`no-underline hover:text-lime ${page === 'history' ? 'text-lime' : 'text-muted'}`}>past_chats</a>
             <StatusPill link={link} />
           </nav>
@@ -73,9 +71,7 @@ export default function App() {
         <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="relative mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
           <span className="font-mono text-[13px] text-faint">// nsu cse 499 · qwen3-4b, before and after our training</span>
-          <h1 className="m-0 max-w-[860px] font-display text-[40px] leading-[1.04] font-bold tracking-[-.03em] sm:text-[56px] lg:text-[64px]">
-            One question. Two models.<br /><span className="text-lime">One speaks Banglish.</span>
-          </h1>
+          <HeroTitle />
           <p className="m-0 max-w-[600px] text-[17px] leading-[1.6] text-muted">
             Ask anything in Banglish. The original Qwen3-4B and our fine-tuned version answer side by side, live, on two GPUs.
           </p>
@@ -168,7 +164,7 @@ export default function App() {
             {STATS.map(s => (
               <div key={s.key} className="flex min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-raise px-4 py-4">
                 <span className="font-mono text-xs text-faint">{s.key}</span>
-                <span className="font-display text-[22px] font-bold sm:text-[30px]"><CountUp count={s.count} prefix={s.prefix} suffix={s.suffix} /></span>
+                <span className="font-display text-[22px] font-bold sm:text-[30px]"><CountUp parts={s.parts} /></span>
                 <span className="text-xs text-muted">{s.note}</span>
               </div>
             ))}
