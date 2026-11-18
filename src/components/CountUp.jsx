@@ -7,7 +7,7 @@ const fmt = (v, { decimals = 0, sep = false }) => {
 
 // Renders a stat made of parts; number parts count from `from` to `to` once the stat scrolls into view
 // (each after its own `delay`). Reduced-motion users see the final values at once.
-export default function CountUp({ parts, duration = 2600 }) {
+export default function CountUp({ parts, duration = 2200 }) {
   const ref = useRef(null)
   const nums = parts.filter(p => typeof p === 'object')
   const [values, setValues] = useState(() => nums.map(n => n.from))
@@ -23,9 +23,10 @@ export default function CountUp({ parts, duration = 2600 }) {
       const tick = now => {
         let running = false
         setValues(nums.map(n => {
-          const k = Math.min(1, Math.max(0, (now - t0 - (n.delay || 0)) / duration))
+          const k = Math.min(1, Math.max(0, (now - t0 - (n.delay || 0)) / (n.duration || duration)))
           if (k < 1) running = true
-          return n.from + (n.to - n.from) * (1 - Math.pow(1 - k, 4))     // fast start, gentle landing
+          const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2  // ease in-out: every digit visibly rolls
+          return n.from + (n.to - n.from) * e
         }))
         if (running) raf = requestAnimationFrame(tick)
       }

@@ -19,7 +19,7 @@ export const EXAMPLES = [
 // Results from our evaluation (186 knowledge questions; see the project guide)
 export const STATS = [
   // parts: plain strings stay still; {from, to, decimals, delay} pieces count when the box scrolls into view
-  { key: 'knowledge_bn', parts: [{ from: 0, to: 69.4, decimals: 1 }, ' → ', { from: 69.4, to: 81.7, decimals: 1, delay: 1900 }, '%'], note: 'questions right in Banglish' },
+  { key: 'knowledge_bn', parts: [{ from: 0, to: 69.4, decimals: 1, duration: 1400 }, ' → ', { from: 69.4, to: 81.7, decimals: 1, delay: 1500, duration: 1400 }, '%'], note: 'questions right in Banglish' },
   { key: 'p_value', parts: [{ from: 1, to: 0.0008, decimals: 4 }], note: 'vs the original (McNemar)' },
   { key: 'train_rows', parts: [{ from: 0, to: 172128, decimals: 0, sep: true }], note: 'Banglish examples' },
   { key: 'phone_size', parts: [{ from: 0, to: 2.5, decimals: 1 }, ' GB'], note: 'runs offline' },
