@@ -12,6 +12,7 @@ export function useBackend() {
   const [queuePos, setQueuePos] = useState(null)
   const [error, setError] = useState(null)
   const client = useRef({ url: null, promise: null })
+  const current = useRef(null)                      // { job, finish } of the running request, for Stop
 
   const check = useCallback(async () => {
     try {
@@ -43,10 +44,12 @@ export function useBackend() {
     try {
       const c = await getClient(link.url)
       const job = c.submit('/stream', { user_text: msg, base_sys: !!baseSys })
-      await new Promise((resolve, reject) => {
+      const stopped = await new Promise((resolve, reject) => {
+        current.current = { job, finish: () => resolve(true) }
         // Consume in the background and settle on "complete": never `break` out of this loop (the client hangs on return()).
         ;(async () => {
           for await (const ev of job) {
+            if (current.current?.job !== job) continue   // stopped or replaced: ignore late events
             if (ev.type === 'data') {
               const d = ev.data?.[0]
               if (d?.error) { reject(new Error(d.error)); continue }
@@ -55,21 +58,32 @@ export function useBackend() {
               if (ev.stage === 'pending' && typeof ev.position === 'number' && ev.position > 0) { setPhase('queued'); setQueuePos(ev.position) }
               else if (ev.stage === 'generating') setPhase('streaming')
               else if (ev.stage === 'error') reject(new Error(ev.message || 'The backend reported an error.'))
-              else if (ev.stage === 'complete') resolve()
+              else if (ev.stage === 'complete') resolve(false)
             }
           }
         })().catch(reject)
       })
-      setPhase('done')
+      current.current = null
+      setPhase(stopped ? 'stopped' : 'done')
     } catch (e) {
+      current.current = null
       setPhase('error'); setError(e?.message || 'Could not reach the backend.')
       client.current = { url: null, promise: null }
       check()
     }
   }, [link, getClient, check])
 
+  // Stop: cancel on the server too (frees the GPUs for the next visitor), keep what was written so far.
+  const stop = useCallback(() => {
+    const cur = current.current
+    if (!cur) return
+    current.current = null                           // from now on, late events from this job are ignored
+    cur.finish()                                     // settle first, so the cancel's own error can't count as a failure
+    try { Promise.resolve(cur.job.cancel()).catch(() => {}) } catch { /* already finished */ }
+  }, [])
+
   const busy = phase === 'connecting' || phase === 'queued' || phase === 'streaming'
-  return { link, reply, phase, queuePos, error, busy, ask }
+  return { link, reply, phase, queuePos, error, busy, ask, stop }
 }
 
 export function ago(iso) {

@@ -15,11 +15,13 @@ function StatusPill({ link }) {
 }
 
 export default function App() {
-  const { link, reply, phase, queuePos, error, busy, ask } = useBackend()
+  const { link, reply, phase, queuePos, error, busy, ask, stop } = useBackend()
   const [msg, setMsg] = useState(EXAMPLES[0].text)
   const [baseSys, setBaseSys] = useState(false)
+  const [showCert, setShowCert] = useState(false)
   const offline = link.state !== 'online'
   const streaming = phase === 'streaming'
+  const stopped = phase === 'stopped'
 
   const send = text => { const t = (text ?? msg).trim(); if (!t || busy || offline) return; setMsg(t); ask(t, baseSys) }
   const onSubmit = e => { e.preventDefault(); send() }
@@ -66,8 +68,8 @@ export default function App() {
       {/* ── live demo ── */}
       <section id="try" className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 pt-3 pb-10 sm:px-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Pane gpu="gpu0" name="qwen3-4b (original)" data={reply.original} streaming={streaming} offline={offline} placeholder={placeholder} />
-          <Pane gpu="gpu1" name="ours (CWH+-D)" highlight data={reply.ours} streaming={streaming} offline={offline} placeholder={placeholder} />
+          <Pane gpu="gpu0" name="qwen3-4b (original)" data={reply.original} streaming={streaming} stopped={stopped} offline={offline} placeholder={placeholder} showCertainty={showCert} />
+          <Pane gpu="gpu1" name="ours (CWH+-D)" highlight data={reply.ours} streaming={streaming} stopped={stopped} offline={offline} placeholder={placeholder} showCertainty={showCert} />
         </div>
 
         {offline && link.state !== 'checking' && (
@@ -91,12 +93,21 @@ export default function App() {
               className="min-w-0 flex-1 border-0 bg-transparent py-3 font-mono text-[15px] text-text outline-none placeholder:text-faint disabled:opacity-50"
             />
           </div>
-          <button
-            type="submit" disabled={busy || offline || !msg.trim()}
-            className="flex-[1_0_auto] cursor-pointer rounded-[9px] border-0 bg-lime px-5 py-3 font-sans text-[15px] font-semibold text-ink transition hover:bg-lime-2 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {busy ? (waitingNote ? 'Waiting…' : 'Running…') : 'Run both ⏎'}
-          </button>
+          {busy ? (
+            <button
+              key="stop" type="button" onClick={e => { e.preventDefault(); stop() }}
+              className="flex flex-[1_0_auto] cursor-pointer items-center justify-center gap-2 rounded-[9px] border border-[#5a2a24] bg-[#1a0f0d] px-5 py-3 font-sans text-[15px] font-semibold text-red transition hover:border-red"
+            >
+              <span className="h-3 w-3 rounded-[2px] bg-red" aria-hidden="true" />Stop
+            </button>
+          ) : (
+            <button
+              key="run" type="submit" disabled={offline || !msg.trim()}
+              className="flex-[1_0_auto] cursor-pointer rounded-[9px] border-0 bg-lime px-5 py-3 font-sans text-[15px] font-semibold text-ink transition hover:bg-lime-2 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Run both ⏎
+            </button>
+          )}
         </form>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -106,14 +117,20 @@ export default function App() {
               className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-2 font-mono text-[13px] text-muted transition hover:border-lime-deep hover:text-lime disabled:cursor-not-allowed disabled:opacity-40"
             >{ex.id}</button>
           ))}
-          <label className="flex cursor-pointer items-center gap-2 font-mono text-[13px] text-muted sm:ml-auto">
-            <input type="checkbox" checked={baseSys} onChange={e => setBaseSys(e.target.checked)} className="h-4 w-4 accent-lime" />
-            --give-original-system-prompt
-          </label>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:ml-auto">
+            <label className="flex cursor-pointer items-center gap-2 font-mono text-[13px] text-muted">
+              <input type="checkbox" checked={baseSys} onChange={e => setBaseSys(e.target.checked)} className="h-4 w-4 accent-lime" />
+              --give-original-system-prompt
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 font-mono text-[13px] text-muted">
+              <input type="checkbox" checked={showCert} onChange={e => setShowCert(e.target.checked)} className="h-4 w-4 accent-lime" />
+              --show-certainty
+            </label>
+          </div>
         </div>
         <p className="m-0 text-[13px] leading-relaxed text-faint">
-          Certainty = how sure each model was about its wording, <span className="text-muted">not</span> whether the answer is right.
           Both run greedy (always the most likely next word), so the same message gives the same reply.
+          {showCert && <> Certainty = how sure each model was about its wording, <span className="text-muted">not</span> whether the answer is right.</>}
         </p>
       </section>
 
