@@ -72,8 +72,6 @@ function Reply({ label, side, highlight }) {
   )
 }
 
-const FIRST_TURNS = 3                // longer conversations show this many turns, then "show N more"
-
 function HideBtn({ hidden, busy, onClick, label }) {
   return (
     <button type="button" disabled={busy} onClick={onClick}
@@ -85,12 +83,10 @@ function HideBtn({ hidden, busy, onClick, label }) {
 
 // One conversation (or one one-shot message): every turn in order, user on the right, both replies side by side.
 function ConvCard({ conv, admin, hidden, pending, toggle }) {
-  const [open, setOpen] = useState(false)
   const { turns, latest, key } = conv
   const multi = turns.length > 1
   const ids = turns.map(t => t._id)
   const allHidden = ids.every(id => hidden.has(id))
-  const list = open || turns.length <= FIRST_TURNS ? turns : turns.slice(0, FIRST_TURNS)
   return (
     <article className={`flex flex-col gap-4 rounded-[14px] border bg-raise p-4 ${admin && allHidden ? 'border-[#5a2a24] opacity-60' : 'border-line'}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -103,7 +99,8 @@ function ConvCard({ conv, admin, hidden, pending, toggle }) {
           </span>
         )}
       </div>
-      {list.map((c, i) => {
+      <div className={`flex flex-col gap-4 ${multi ? 'chat-scroll -mr-2 max-h-[520px] overflow-y-auto pr-2' : ''}`}>
+      {turns.map((c, i) => {
         const turnHidden = hidden.has(c._id)
         return (
           <div key={c._id} className={`flex flex-col gap-3 ${i ? 'border-t border-line pt-4' : ''} ${admin && turnHidden && !allHidden ? 'opacity-50' : ''}`}>
@@ -126,12 +123,7 @@ function ConvCard({ conv, admin, hidden, pending, toggle }) {
           </div>
         )
       })}
-      {turns.length > FIRST_TURNS && (
-        <button type="button" onClick={() => setOpen(o => !o)}
-          className="cursor-pointer self-start border-0 bg-transparent p-0 font-mono text-xs text-muted hover:text-lime">
-          {open ? 'show fewer turns' : `show ${turns.length - FIRST_TURNS} more turn${turns.length - FIRST_TURNS > 1 ? 's' : ''}`}
-        </button>
-      )}
+      </div>
     </article>
   )
 }
