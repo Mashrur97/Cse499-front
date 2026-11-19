@@ -82,16 +82,17 @@ function HideBtn({ hidden, busy, onClick, label }) {
 }
 
 // One conversation (or one one-shot message): every turn in order, user on the right, both replies side by side.
-function ConvCard({ conv, admin, hidden, pending, toggle }) {
+function ConvCard({ conv, n, admin, hidden, pending, toggle }) {
   const { turns, latest, key } = conv
   const multi = turns.length > 1
   const ids = turns.map(t => t._id)
   const allHidden = ids.every(id => hidden.has(id))
   return (
-    <article className={`flex flex-col gap-4 rounded-[14px] border bg-raise p-4 ${admin && allHidden ? 'border-[#5a2a24] opacity-60' : 'border-line'}`}>
-      <div className="flex flex-wrap items-center gap-2">
+    <article className={`flex flex-col overflow-hidden rounded-[14px] border bg-raise ${admin && allHidden ? 'border-[#5a2a24] opacity-60' : 'border-line-2'}`}>
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-line bg-panel px-4 py-2.5">
+        <span className="font-display text-[15px] font-bold text-text">#{n}</span>
+        {multi ? <Flag tone="lime">multi-turn · {turns.length} turns</Flag> : <Flag>one-shot</Flag>}
         <span className="font-mono text-xs text-faint" title={latest}>{ago(latest)}</span>
-        {multi && <Flag tone="lime">conversation · {turns.length} turns</Flag>}
         {admin && allHidden && <Flag tone="amber">hidden</Flag>}
         {admin && (
           <span className="ml-auto">
@@ -99,7 +100,7 @@ function ConvCard({ conv, admin, hidden, pending, toggle }) {
           </span>
         )}
       </div>
-      <div className={`flex flex-col gap-4 ${multi ? 'chat-scroll -mr-2 max-h-[520px] overflow-y-auto pr-2' : ''}`}>
+      <div className={`flex flex-col gap-4 p-4 ${multi ? 'chat-scroll max-h-[520px] overflow-y-auto' : ''}`}>
       {turns.map((c, i) => {
         const turnHidden = hidden.has(c._id)
         return (
@@ -241,9 +242,9 @@ export default function PastChats({ admin = false }) {
       {adminErr && <div className="rounded-[10px] border border-[#5a2a24] bg-[#1a0f0d] px-4 py-2.5 font-mono text-sm text-red" role="alert">{adminErr}</div>}
       {state === 'ready' && !chats.length && <p className="m-0 font-mono text-sm text-faint">no chats yet.</p>}
 
-      <div className="flex flex-col gap-4">
-        {filtered.slice(0, shown).map(conv => (
-          <ConvCard key={conv.key} conv={conv} admin={admin} hidden={hidden} pending={pending} toggle={toggle} />
+      <div className="flex flex-col gap-8">
+        {filtered.slice(0, shown).map((conv, i) => (
+          <ConvCard key={conv.key} conv={conv} n={i + 1} admin={admin} hidden={hidden} pending={pending} toggle={toggle} />
         ))}
       </div>
 
