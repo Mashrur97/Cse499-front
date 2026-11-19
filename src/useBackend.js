@@ -4,12 +4,12 @@ import { LINK_URL, POLL_MS, STALE_MIN, MAX_CHARS } from './config.js'
 
 const EMPTY = { text: '', tokens: 0, done: false, hit_limit: false, certainty: null, tok_per_s: null }
 
-// Finds the live Kaggle backend through link.json and holds a multi-turn conversation with both models via /chat_stream.
+// Finds the live Kaggle backend (v5) through link.json. Chat mode holds a conversation via /chat_stream; one-shot uses /stream.
 // Each model only sees its OWN earlier replies (plus the shared user messages).
 export function useBackend() {
   const [link, setLink] = useState({ state: 'checking', url: null, updated: null })
   const [turns, setTurns] = useState([])            // [{ user, original, ours }]
-  const [multiTurn, setMultiTurn] = useState(false) // true once we know the backend is v5
+  const [mode, setModeState] = useState('chat')     // chat: each model sees its own history | single: every message starts fresh
   const convId = useRef(newId())
   const [phase, setPhase] = useState('idle')        // idle | connecting | queued | streaming | done | error
   const [queuePos, setQueuePos] = useState(null)
@@ -32,13 +32,6 @@ export function useBackend() {
 
   useEffect(() => { check(); const t = setInterval(check, POLL_MS); return () => clearInterval(t) }, [check])
 
-  // Once online, connect early to learn whether the backend supports conversations (v5) before the first message.
-  useEffect(() => {
-    if (link.state !== 'online' || !link.url) return
-    let alive = true
-    getClient(link.url).then(c => { if (alive) setMultiTurn(!!c.config?.dependencies?.some(d => d.api_name === 'chat_stream')) }).catch(() => {})
-    return () => { alive = false }
-  }, [link.state, link.url]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const getClient = useCallback(url => {
     if (client.current.url !== url) {
@@ -53,21 +46,20 @@ export function useBackend() {
   const ask = useCallback(async (text, baseSys) => {
     const msg = (text || '').trim().slice(0, MAX_CHARS)
     if (!msg || link.state !== 'online') return
+    const prior = mode === 'chat' ? turns : []         // one-shot: no history
     const history = { original: [], ours: [] }
-    for (const t of turns) {
+    for (const t of prior) {
       if (!t.original.text && !t.ours.text) continue          // a failed turn adds nothing
       history.original.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.original.text })
       history.ours.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.ours.text })
     }
-    const turnIndex = turns.length
+    const turnIndex = prior.length
     setError(null); setQueuePos(null); setPhase('connecting')
-    setTurns(ts => [...ts, { user: msg, original: EMPTY, ours: EMPTY }])
+    setTurns(ts => [...(mode === 'chat' ? ts : []), { user: msg, original: EMPTY, ours: EMPTY }])
     try {
       const c = await getClient(link.url)
-      // Backend v5 has /chat_stream (conversations). v4 only has /stream: then every message starts fresh.
-      const multi = !!c.config?.dependencies?.some(d => d.api_name === 'chat_stream')
-      setMultiTurn(multi)
-      if (!multi) setTurns(ts => ts.slice(-1))
+      // Backend v5: chat mode -> /chat_stream with history; one-shot -> /stream (logged as a single message).
+      const multi = mode === 'chat'
       const job = multi
         ? c.submit('/chat_stream', {
             user_text: msg, base_sys: !!baseSys, history_json: JSON.stringify(history),
@@ -101,9 +93,10 @@ export function useBackend() {
       client.current = { url: null, promise: null }
       check()
     }
-  }, [link, getClient, check, turns])
+  }, [link, getClient, check, turns, mode])
 
-  const newChat = useCallback(() => { if (current.current) return; setTurns([]); setError(null); setPhase('idle'); convId.current = newId() }, [])
+  const clearChat = useCallback(() => { if (current.current) return; setTurns([]); setError(null); setPhase('idle'); convId.current = newId() }, [])
+  const setMode = useCallback(m => { if (current.current) return; setModeState(m); clearChat() }, [clearChat])
 
   // Stop: cancel on the server too (frees the GPUs for the next visitor), keep what was written so far.
   const stop = useCallback(() => {
@@ -115,7 +108,7 @@ export function useBackend() {
   }, [])
 
   const busy = phase === 'connecting' || phase === 'queued' || phase === 'streaming'
-  return { link, turns, phase, queuePos, error, busy, ask, stop, newChat, multiTurn }
+  return { link, turns, phase, queuePos, error, busy, ask, stop, clearChat, mode, setMode }
 }
 
 function newId() {

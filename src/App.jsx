@@ -40,7 +40,7 @@ export default function App() {
     taps.current = [...taps.current.filter(t => now - t < 4000), now]
     if (taps.current.length >= 5) { taps.current = []; window.location.hash = '#admin' }
   }
-  const { link, turns, phase, queuePos, error, busy, ask, stop, newChat, multiTurn } = useBackend()
+  const { link, turns, phase, queuePos, error, busy, ask, stop, clearChat, mode, setMode } = useBackend()
   const [msg, setMsg] = useState('')
   const [baseSys, setBaseSys] = useState(false)
   const [showCert, setShowCert] = useState(false)
@@ -92,14 +92,22 @@ export default function App() {
       <section id="try" className="mx-auto flex max-w-[1440px] scroll-mt-6 flex-col gap-4 px-4 pb-20 sm:px-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="m-0 font-display text-[26px] font-bold">Live demo</h2>
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-xs text-faint">{multiTurn && turns.length ? `${turns.length} turn${turns.length > 1 ? 's' : ''} · each model sees its own history` : 'same message · same settings · greedy'}</span>
-            {multiTurn && turns.length > 0 && (
-              <button type="button" onClick={newChat} disabled={busy}
-                className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-1.5 font-mono text-xs text-muted transition hover:border-lime-deep hover:text-lime disabled:cursor-not-allowed disabled:opacity-40">
-                new_chat
-              </button>
-            )}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="hidden font-mono text-xs text-faint sm:inline">
+              {mode === 'chat' ? (turns.length ? `${turns.length} turn${turns.length > 1 ? 's' : ''} · each model sees its own history` : 'each model sees its own history') : 'every message starts fresh'}
+            </span>
+            <div role="radiogroup" aria-label="Mode" className="flex rounded-md border border-line-2 p-0.5 font-mono text-xs">
+              {[['chat', 'chat'], ['single', 'one-shot']].map(([m, label]) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={busy} onClick={() => mode !== m && setMode(m)}
+                  className={`cursor-pointer rounded border-0 px-3 py-1 transition disabled:cursor-not-allowed ${mode === m ? 'bg-lime-deep text-lime' : 'bg-transparent text-muted hover:text-text'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={clearChat} disabled={busy || !turns.length}
+              className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-1.5 font-mono text-xs text-muted transition hover:border-[#5a2a24] hover:text-red disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line-2 disabled:hover:text-muted">
+              clear_chat
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -124,7 +132,7 @@ export default function App() {
             <label htmlFor="msg" className="sr-only">Your message (Banglish)</label>
             <input
               id="msg" value={msg} maxLength={MAX_CHARS} onChange={e => setMsg(e.target.value)} disabled={offline}
-              placeholder={multiTurn && turns.length ? 'Reply…' : 'Ask anything in Banglish… e.g. ki obostha bhai?'} autoComplete="off"
+              placeholder={mode === 'chat' && turns.length ? 'Reply…' : 'Ask anything in Banglish… e.g. ki obostha bhai?'} autoComplete="off"
               className="min-w-0 flex-1 border-0 bg-transparent py-3 font-mono text-[15px] text-text outline-none placeholder:text-faint disabled:opacity-50"
             />
           </div>
