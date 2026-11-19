@@ -72,6 +72,70 @@ function Reply({ label, side, highlight }) {
   )
 }
 
+const FIRST_TURNS = 3                // longer conversations show this many turns, then "show N more"
+
+function HideBtn({ hidden, busy, onClick, label }) {
+  return (
+    <button type="button" disabled={busy} onClick={onClick}
+      className={`cursor-pointer rounded-md border bg-transparent px-3 py-1 font-mono text-xs transition disabled:cursor-wait disabled:opacity-50 ${hidden ? 'border-lime-deep text-lime hover:bg-lime-deep' : 'border-[#5a2a24] text-red hover:bg-[#1a0f0d]'}`}>
+      {busy ? '…' : hidden ? `unhide${label}` : `hide${label}`}
+    </button>
+  )
+}
+
+// One conversation (or one one-shot message): every turn in order, user on the right, both replies side by side.
+function ConvCard({ conv, admin, hidden, pending, toggle }) {
+  const [open, setOpen] = useState(false)
+  const { turns, latest, key } = conv
+  const multi = turns.length > 1
+  const ids = turns.map(t => t._id)
+  const allHidden = ids.every(id => hidden.has(id))
+  const list = open || turns.length <= FIRST_TURNS ? turns : turns.slice(0, FIRST_TURNS)
+  return (
+    <article className={`flex flex-col gap-4 rounded-[14px] border bg-raise p-4 ${admin && allHidden ? 'border-[#5a2a24] opacity-60' : 'border-line'}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-xs text-faint" title={latest}>{ago(latest)}</span>
+        {multi && <Flag tone="lime">conversation · {turns.length} turns</Flag>}
+        {admin && allHidden && <Flag tone="amber">hidden</Flag>}
+        {admin && (
+          <span className="ml-auto">
+            <HideBtn hidden={allHidden} busy={pending === key} label={multi ? ' all' : ''} onClick={() => toggle(ids, !allHidden, key)} />
+          </span>
+        )}
+      </div>
+      {list.map((c, i) => {
+        const turnHidden = hidden.has(c._id)
+        return (
+          <div key={c._id} className={`flex flex-col gap-3 ${i ? 'border-t border-line pt-4' : ''} ${admin && turnHidden && !allHidden ? 'opacity-50' : ''}`}>
+            {(multi || c.original_got_instruction || c.stopped_by_user) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {multi && <span className="font-mono text-[11px] text-faint">turn {(c.turn ?? i) + 1}</span>}
+                {c.original_got_instruction && <Flag>original got instruction</Flag>}
+                {c.stopped_by_user && <Flag tone="amber">stopped</Flag>}
+                {admin && multi && turnHidden && !allHidden && <Flag tone="amber">hidden</Flag>}
+                {admin && multi && (
+                  <span className="ml-auto"><HideBtn hidden={turnHidden} busy={pending === c._id} label="" onClick={() => toggle([c._id], !turnHidden, c._id)} /></span>
+                )}
+              </div>
+            )}
+            <p className="m-0 max-w-[85%] self-end rounded-[14px] rounded-tr-[4px] border border-lime-deep bg-[#16210f] px-3.5 py-2 text-[15px] text-text">{c.message}</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Reply label="qwen3-4b (original)" side={c.original} />
+              <Reply label="ours (CWH+-D)" side={c.ours} highlight />
+            </div>
+          </div>
+        )
+      })}
+      {turns.length > FIRST_TURNS && (
+        <button type="button" onClick={() => setOpen(o => !o)}
+          className="cursor-pointer self-start border-0 bg-transparent p-0 font-mono text-xs text-muted hover:text-lime">
+          {open ? 'show fewer turns' : `show ${turns.length - FIRST_TURNS} more turn${turns.length - FIRST_TURNS > 1 ? 's' : ''}`}
+        </button>
+      )}
+    </article>
+  )
+}
+
 export default function PastChats({ admin = false }) {
   const [sessions, setSessions] = useState(null)       // file paths, newest first
   const [loadedUpTo, setLoadedUpTo] = useState(0)
@@ -85,10 +149,10 @@ export default function PastChats({ admin = false }) {
   const [pending, setPending] = useState(null)           // id being hidden/unhidden
   const [adminErr, setAdminErr] = useState('')
 
-  const toggle = async (id, hide) => {
-    setPending(id); setAdminErr('')
+  const toggle = async (ids, hide, key) => {
+    setPending(key); setAdminErr('')
     try {
-      const d = await adminCall({ action: hide ? 'hide' : 'unhide', ids: [id] })
+      const d = await adminCall({ action: hide ? 'hide' : 'unhide', ids })
       setHidden(new Set(d.ids))
     } catch (e) {
       setAdminErr(e.message)
@@ -121,12 +185,25 @@ export default function PastChats({ admin = false }) {
     return () => { alive = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Turns of one conversation share a conversation_id; one-shot messages are their own group. Newest conversation first.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return chats
-      .map(c => (c._id ? c : Object.assign(c, { _id: chatId(c) })))
-      .filter(c => (admin ? view === 'all' || hidden.has(c._id) : !hidden.has(c._id)))
-      .filter(c => !q || [c.message, c.original?.text, c.ours?.text].some(t => (t || '').toLowerCase().includes(q)))
+    const groups = new Map()
+    for (const c of chats) {
+      if (!c._id) c._id = chatId(c)
+      if (admin ? view === 'hidden' && !hidden.has(c._id) : hidden.has(c._id)) continue
+      const key = c.conversation_id ? `c:${c.conversation_id}` : `s:${c._id}`
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(c)
+    }
+    const hit = c => [c.message, c.original?.text, c.ours?.text].some(t => (t || '').toLowerCase().includes(q))
+    return [...groups.entries()]
+      .map(([key, turns]) => {
+        turns.sort((a, b) => (a.turn ?? 0) - (b.turn ?? 0) || (a.time || '').localeCompare(b.time || ''))
+        return { key, turns, latest: turns.reduce((m, t) => ((t.time || '') > m ? t.time : m), '') }
+      })
+      .filter(g => !q || g.turns.some(hit))
+      .sort((a, b) => b.latest.localeCompare(a.latest))
   }, [chats, query, hidden, admin, view])
 
 
@@ -147,7 +224,7 @@ export default function PastChats({ admin = false }) {
               id="q" value={query} onChange={e => { setQuery(e.target.value); setShown(SHOW_PER_PAGE) }} placeholder="search…"
               className="w-full rounded-[9px] sm:w-[220px] border border-line-2 bg-raise px-3 py-2 font-mono text-[13px] text-text outline-none placeholder:text-faint focus:border-lime-deep"
             />
-            <span className="font-mono text-xs text-faint">{filtered.length} chats</span>
+            <span className="font-mono text-xs text-faint">{filtered.length} chat{filtered.length === 1 ? '' : 's'}</span>
             {admin && (
               <>
                 <button type="button" onClick={() => { setView(v => (v === 'all' ? 'hidden' : 'all')); setShown(SHOW_PER_PAGE) }}
@@ -173,31 +250,9 @@ export default function PastChats({ admin = false }) {
       {state === 'ready' && !chats.length && <p className="m-0 font-mono text-sm text-faint">no chats yet.</p>}
 
       <div className="flex flex-col gap-4">
-        {filtered.slice(0, shown).map((c, i) => {
-          const isHidden = hidden.has(c._id)
-          return (
-          <article key={`${c._id}-${i}`} className={`flex flex-col gap-3 rounded-[14px] border bg-raise p-4 ${isHidden ? 'border-[#5a2a24] opacity-60' : 'border-line'}`}>
-            <div className="flex flex-wrap items-center gap-2">
-              {admin && (
-                <button type="button" disabled={pending === c._id} onClick={() => toggle(c._id, !isHidden)}
-                  className={`order-last ml-auto cursor-pointer rounded-md border bg-transparent px-3 py-1 font-mono text-xs transition disabled:cursor-wait disabled:opacity-50 ${isHidden ? 'border-lime-deep text-lime hover:bg-lime-deep' : 'border-[#5a2a24] text-red hover:bg-[#1a0f0d]'}`}>
-                  {pending === c._id ? '…' : isHidden ? 'unhide' : 'hide'}
-                </button>
-              )}
-              {admin && isHidden && <Flag tone="amber">hidden</Flag>}
-              <span className="font-mono text-xs text-faint" title={c.time}>{ago(c.time)}</span>
-              {c.original_got_instruction && <Flag>original got instruction</Flag>}
-              {c.stopped_by_user && <Flag tone="amber">stopped</Flag>}
-              {c.turn > 0 && <Flag tone="lime">turn {c.turn + 1}</Flag>}
-            </div>
-            <p className="m-0 self-start rounded-[12px] rounded-bl-[4px] bg-line px-3.5 py-2 text-[15px] text-text">{c.message}</p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Reply label="qwen3-4b (original)" side={c.original} />
-              <Reply label="ours (CWH+-D)" side={c.ours} highlight />
-            </div>
-          </article>
-          )
-        })}
+        {filtered.slice(0, shown).map(conv => (
+          <ConvCard key={conv.key} conv={conv} admin={admin} hidden={hidden} pending={pending} toggle={toggle} />
+        ))}
       </div>
 
       {state === 'ready' && (shown < filtered.length || (sessions && loadedUpTo < sessions.length)) && (
