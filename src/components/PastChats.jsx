@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { LOGS_API, LOGS_REPO } from '../config.js'
 import { Markdown } from './Pane.jsx'
 import { ago } from '../useBackend.js'
+import { chatId } from '../chatId.js'
 
 const SESSIONS_PER_PAGE = 6          // one log file per Kaggle session; newest first
 const SHOW_PER_PAGE = 30
@@ -24,6 +25,55 @@ async function loadSession(path) {
     try { out.push(JSON.parse(line)) } catch { /* skip a half-written line */ }
   }
   return out
+}
+
+// Chats the admin hid: ids in hidden.json (missing file = nothing hidden).
+async function loadHidden() {
+  try {
+    const r = await fetch(`${LOGS_API}/datasets/${LOGS_REPO}/resolve/main/hidden.json?t=${Date.now()}`, { cache: 'no-store' })
+    if (!r.ok) return new Set()
+    const d = await r.json()
+    return new Set(Array.isArray(d.ids) ? d.ids : [])
+  } catch { return new Set() }
+}
+
+const PW_KEY = 'banglish-admin'
+const readPw = () => { try { return sessionStorage.getItem(PW_KEY) || '' } catch { return '' } }
+const savePw = v => { try { v ? sessionStorage.setItem(PW_KEY, v) : sessionStorage.removeItem(PW_KEY) } catch { /* private window */ } }
+
+async function adminCall(body) {
+  const r = await fetch('/.netlify/functions/admin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  let d = {}
+  try { d = await r.json() } catch { /* not JSON */ }
+  if (!r.ok) throw Object.assign(new Error(d.error || `server answered ${r.status}`), { status: r.status })
+  return d
+}
+
+// Password gate for the admin view; the password is checked by the Netlify function, never in the page.
+function Login({ onIn }) {
+  const [pw, setPw] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async e => {
+    e.preventDefault()
+    if (!pw || busy) return
+    setBusy(true); setErr('')
+    try { await adminCall({ password: pw, action: 'check' }); savePw(pw); onIn(pw) }
+    catch (e2) { setErr(e2.status === 401 ? 'wrong password' : e2.message) }
+    finally { setBusy(false) }
+  }
+  return (
+    <form onSubmit={submit} className="flex max-w-[420px] flex-col gap-3 rounded-[14px] border border-line-2 bg-raise p-5">
+      <label htmlFor="pw" className="font-mono text-xs text-muted">admin password</label>
+      <input id="pw" type="password" autoFocus value={pw} onChange={e => setPw(e.target.value)} autoComplete="current-password"
+        className="rounded-[9px] border border-line-2 bg-panel px-3 py-2 font-mono text-[14px] text-text outline-none focus:border-lime-deep" />
+      <button type="submit" disabled={busy || !pw}
+        className="cursor-pointer self-start rounded-[9px] border-0 bg-lime px-5 py-2 font-mono text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50">
+        {busy ? 'checking…' : 'enter'}
+      </button>
+      {err && <span className="font-mono text-xs text-red" role="alert">{err}</span>}
+    </form>
+  )
 }
 
 function Flag({ children, tone = 'faint' }) {
@@ -53,7 +103,7 @@ function Reply({ label, side, highlight }) {
   )
 }
 
-export default function PastChats() {
+export default function PastChats({ admin = false }) {
   const [sessions, setSessions] = useState(null)       // file paths, newest first
   const [loadedUpTo, setLoadedUpTo] = useState(0)
   const [chats, setChats] = useState([])
@@ -61,6 +111,22 @@ export default function PastChats() {
   const [errMsg, setErrMsg] = useState('')
   const [query, setQuery] = useState('')
   const [shown, setShown] = useState(SHOW_PER_PAGE)
+  const [hidden, setHidden] = useState(() => new Set())
+  const [pw, setPw] = useState(() => (admin ? readPw() : ''))
+  const [view, setView] = useState('all')                // admin: all | hidden
+  const [pending, setPending] = useState(null)           // id being hidden/unhidden
+  const [adminErr, setAdminErr] = useState('')
+
+  const toggle = async (id, hide) => {
+    setPending(id); setAdminErr('')
+    try {
+      const d = await adminCall({ password: pw, action: hide ? 'hide' : 'unhide', ids: [id] })
+      setHidden(new Set(d.ids))
+    } catch (e) {
+      if (e.status === 401) { savePw(''); setPw('') }
+      setAdminErr(e.message)
+    } finally { setPending(null) }
+  }
 
   const loadMoreSessions = async (all, from) => {
     const batch = all.slice(from, from + SESSIONS_PER_PAGE)
@@ -73,7 +139,8 @@ export default function PastChats() {
     let alive = true
     ;(async () => {
       try {
-        const all = await listSessions()
+        const [all, hid] = await Promise.all([listSessions(), loadHidden()])
+        if (alive) setHidden(hid)
         if (!alive) return
         setSessions(all)
         await loadMoreSessions(all, 0)
@@ -89,25 +156,50 @@ export default function PastChats() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return q ? chats.filter(c => [c.message, c.original?.text, c.ours?.text].some(t => (t || '').toLowerCase().includes(q))) : chats
-  }, [chats, query])
+    return chats
+      .map(c => (c._id ? c : Object.assign(c, { _id: chatId(c) })))
+      .filter(c => (admin ? view === 'all' || hidden.has(c._id) : !hidden.has(c._id)))
+      .filter(c => !q || [c.message, c.original?.text, c.ours?.text].some(t => (t || '').toLowerCase().includes(q)))
+  }, [chats, query, hidden, admin, view])
+
+  if (admin && !pw) {
+    return (
+      <section className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
+        <a href="#" className="font-mono text-xs text-muted no-underline hover:text-lime">← back to the demo</a>
+        <h1 className="m-0 font-display text-[34px] font-bold tracking-[-.02em]">Admin</h1>
+        <Login onIn={setPw} />
+      </section>
+    )
+  }
 
   return (
     <section className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1.5">
           <a href="#" className="font-mono text-xs text-muted no-underline hover:text-lime">← back to the demo</a>
-          <h1 className="m-0 font-display text-[34px] font-bold tracking-[-.02em]">Past chats</h1>
-          <p className="m-0 text-[15px] text-muted">What people asked the demo, and what both models answered. Newest first.</p>
+          <h1 className="m-0 font-display text-[34px] font-bold tracking-[-.02em]">{admin ? 'Admin · past chats' : 'Past chats'}</h1>
+          <p className="m-0 text-[15px] text-muted">
+            {admin ? `Hidden chats disappear from Past chats; the raw logs keep them. ${hidden.size} hidden.` : 'What people asked the demo, and what both models answered. Newest first.'}
+          </p>
         </div>
         {state === 'ready' && (
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3 whitespace-nowrap sm:w-auto">
             <label htmlFor="q" className="sr-only">Search chats</label>
             <input
               id="q" value={query} onChange={e => { setQuery(e.target.value); setShown(SHOW_PER_PAGE) }} placeholder="search…"
-              className="w-[220px] max-w-full rounded-[9px] border border-line-2 bg-raise px-3 py-2 font-mono text-[13px] text-text outline-none placeholder:text-faint focus:border-lime-deep"
+              className="w-full rounded-[9px] sm:w-[220px] border border-line-2 bg-raise px-3 py-2 font-mono text-[13px] text-text outline-none placeholder:text-faint focus:border-lime-deep"
             />
             <span className="font-mono text-xs text-faint">{filtered.length} chats</span>
+            {admin && (
+              <>
+                <button type="button" onClick={() => { setView(v => (v === 'all' ? 'hidden' : 'all')); setShown(SHOW_PER_PAGE) }}
+                  className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-1.5 font-mono text-xs text-muted hover:border-lime-deep hover:text-lime">
+                  {view === 'all' ? 'show hidden only' : 'show all'}
+                </button>
+                <button type="button" onClick={() => { savePw(''); setPw('') }}
+                  className="cursor-pointer border-0 bg-transparent p-0 font-mono text-xs text-faint hover:text-red">log out</button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -121,12 +213,22 @@ export default function PastChats() {
       {state === 'error' && (
         <div className="rounded-[14px] border border-[#5a2a24] bg-[#1a0f0d] px-5 py-3 font-mono text-sm text-red" role="alert">couldn't load chats: {errMsg}</div>
       )}
+      {adminErr && <div className="rounded-[10px] border border-[#5a2a24] bg-[#1a0f0d] px-4 py-2.5 font-mono text-sm text-red" role="alert">{adminErr}</div>}
       {state === 'ready' && !chats.length && <p className="m-0 font-mono text-sm text-faint">no chats yet.</p>}
 
       <div className="flex flex-col gap-4">
-        {filtered.slice(0, shown).map((c, i) => (
-          <article key={`${c.time}-${i}`} className="flex flex-col gap-3 rounded-[14px] border border-line bg-raise p-4">
+        {filtered.slice(0, shown).map((c, i) => {
+          const isHidden = hidden.has(c._id)
+          return (
+          <article key={`${c._id}-${i}`} className={`flex flex-col gap-3 rounded-[14px] border bg-raise p-4 ${isHidden ? 'border-[#5a2a24] opacity-60' : 'border-line'}`}>
             <div className="flex flex-wrap items-center gap-2">
+              {admin && (
+                <button type="button" disabled={pending === c._id} onClick={() => toggle(c._id, !isHidden)}
+                  className={`order-last ml-auto cursor-pointer rounded-md border bg-transparent px-3 py-1 font-mono text-xs transition disabled:cursor-wait disabled:opacity-50 ${isHidden ? 'border-lime-deep text-lime hover:bg-lime-deep' : 'border-[#5a2a24] text-red hover:bg-[#1a0f0d]'}`}>
+                  {pending === c._id ? '…' : isHidden ? 'unhide' : 'hide'}
+                </button>
+              )}
+              {admin && isHidden && <Flag tone="amber">hidden</Flag>}
               <span className="font-mono text-xs text-faint" title={c.time}>{ago(c.time)}</span>
               {c.original_got_instruction && <Flag>original got instruction</Flag>}
               {c.stopped_by_user && <Flag tone="amber">stopped</Flag>}
@@ -138,7 +240,8 @@ export default function PastChats() {
               <Reply label="ours (CWH+-D)" side={c.ours} highlight />
             </div>
           </article>
-        ))}
+          )
+        })}
       </div>
 
       {state === 'ready' && (shown < filtered.length || (sessions && loadedUpTo < sessions.length)) && (

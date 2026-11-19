@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useBackend, ago } from './useBackend.js'
 import { EXAMPLES, STATS, MAX_CHARS } from './config.js'
 import Pane from './components/Pane.jsx'
@@ -19,12 +19,12 @@ function StatusPill({ link }) {
 }
 
 function useHashPage() {
-  const get = () => (window.location.hash === '#history' ? 'history' : 'demo')
+  const get = () => ({ '#history': 'history', '#admin': 'admin' })[window.location.hash] || 'demo'
   const [page, setPage] = useState(get)
   useEffect(() => {
     const on = () => {
       const p = get(); setPage(p)
-      if (p === 'history') window.scrollTo(0, 0)
+      if (p !== 'demo') window.scrollTo(0, 0)
       else requestAnimationFrame(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView())
     }
     window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on)
@@ -34,6 +34,12 @@ function useHashPage() {
 
 export default function App() {
   const page = useHashPage()
+  const taps = useRef([])
+  const secretTap = () => {                              // 5 taps on the footer credit within 4 s opens #admin
+    const now = Date.now()
+    taps.current = [...taps.current.filter(t => now - t < 4000), now]
+    if (taps.current.length >= 5) { taps.current = []; window.location.hash = '#admin' }
+  }
   const { link, turns, phase, queuePos, error, busy, ask, stop, newChat, multiTurn } = useBackend()
   const [msg, setMsg] = useState('')
   const [baseSys, setBaseSys] = useState(false)
@@ -63,7 +69,7 @@ export default function App() {
         </div>
       </header>
 
-      {page === 'history' ? <PastChats /> : (
+      {page !== 'demo' ? <PastChats key={page} admin={page === 'admin'} /> : (
       <>
       {/* ── hero ── */}
       <section id="top" className="relative overflow-hidden">
@@ -203,7 +209,7 @@ export default function App() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-[1180px] flex-wrap justify-between gap-3 px-4 py-6 font-mono text-xs text-faint sm:px-8">
-          <span>NSU CSE 499 · Mashrur and team</span>
+          <span onClick={secretTap}>NSU CSE 499 · Mashrur and team</span>
           <span>original: Qwen3-4B-Instruct-2507 · ours: + QLoRA adapter (CWH+-D)</span>
         </div>
       </footer>
