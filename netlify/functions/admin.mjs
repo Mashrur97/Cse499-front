@@ -1,15 +1,13 @@
 // Admin for Past chats: hides / unhides chats by keeping their ids in hidden.json in the logs dataset.
 // The chat logs themselves are never edited (the running notebook re-uploads its session file, which would undo it).
-// Netlify environment variables: ADMIN_PASSWORD, HF_ADMIN_TOKEN (fine-grained, write on the logs dataset only).
-import { createHash, timingSafeEqual } from 'node:crypto'
+// No password (RN's call: the admin page is only reachable by the hidden footer taps, and hiding is reversible).
+// Netlify environment variable: HF_ADMIN_TOKEN (fine-grained, write on the logs dataset only).
 
 const REPO = process.env.LOGS_REPO || 'mashrur991/banglish-demo-logs'
 const HF = process.env.HF_API || 'https://huggingface.co'
 const FILE = 'hidden.json'
 
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
-const digest = s => createHash('sha256').update(String(s)).digest()
-const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 async function readHidden(token) {
   const r = await fetch(`${HF}/datasets/${REPO}/resolve/main/${FILE}?t=${Date.now()}`, { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' })
@@ -34,16 +32,14 @@ async function writeHidden(token, ids, summary) {
 
 export default async req => {
   if (req.method !== 'POST') return json(405, { error: 'POST only' })
-  const { ADMIN_PASSWORD: pw, HF_ADMIN_TOKEN: token } = process.env
-  if (!pw || !token) return json(500, { error: 'Admin is not set up: add ADMIN_PASSWORD and HF_ADMIN_TOKEN in Netlify.' })
+  const token = process.env.HF_ADMIN_TOKEN
+  if (!token) return json(500, { error: 'Admin is not set up: add HF_ADMIN_TOKEN in Netlify.' })
 
   let input
   try { input = await req.json() } catch { return json(400, { error: 'bad request' }) }
-  if (!timingSafeEqual(digest(input.password ?? ''), digest(pw))) { await sleep(800); return json(401, { error: 'wrong password' }) }
 
   const ids = Array.isArray(input.ids) ? input.ids.filter(x => typeof x === 'string' && x.length < 200).slice(0, 500) : []
   try {
-    if (input.action === 'check') return json(200, { ok: true })
     if (input.action !== 'hide' && input.action !== 'unhide') return json(400, { error: 'unknown action' })
     if (!ids.length) return json(400, { error: 'no ids' })
     const cur = new Set(await readHidden(token))

@@ -37,43 +37,12 @@ async function loadHidden() {
   } catch { return new Set() }
 }
 
-const PW_KEY = 'banglish-admin'
-const readPw = () => { try { return sessionStorage.getItem(PW_KEY) || '' } catch { return '' } }
-const savePw = v => { try { v ? sessionStorage.setItem(PW_KEY, v) : sessionStorage.removeItem(PW_KEY) } catch { /* private window */ } }
-
 async function adminCall(body) {
   const r = await fetch('/.netlify/functions/admin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
   let d = {}
   try { d = await r.json() } catch { /* not JSON */ }
   if (!r.ok) throw Object.assign(new Error(d.error || `server answered ${r.status}`), { status: r.status })
   return d
-}
-
-// Password gate for the admin view; the password is checked by the Netlify function, never in the page.
-function Login({ onIn }) {
-  const [pw, setPw] = useState('')
-  const [err, setErr] = useState('')
-  const [busy, setBusy] = useState(false)
-  const submit = async e => {
-    e.preventDefault()
-    if (!pw || busy) return
-    setBusy(true); setErr('')
-    try { await adminCall({ password: pw, action: 'check' }); savePw(pw); onIn(pw) }
-    catch (e2) { setErr(e2.status === 401 ? 'wrong password' : e2.message) }
-    finally { setBusy(false) }
-  }
-  return (
-    <form onSubmit={submit} className="flex max-w-[420px] flex-col gap-3 rounded-[14px] border border-line-2 bg-raise p-5">
-      <label htmlFor="pw" className="font-mono text-xs text-muted">admin password</label>
-      <input id="pw" type="password" autoFocus value={pw} onChange={e => setPw(e.target.value)} autoComplete="current-password"
-        className="rounded-[9px] border border-line-2 bg-panel px-3 py-2 font-mono text-[14px] text-text outline-none focus:border-lime-deep" />
-      <button type="submit" disabled={busy || !pw}
-        className="cursor-pointer self-start rounded-[9px] border-0 bg-lime px-5 py-2 font-mono text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50">
-        {busy ? 'checking…' : 'enter'}
-      </button>
-      {err && <span className="font-mono text-xs text-red" role="alert">{err}</span>}
-    </form>
-  )
 }
 
 function Flag({ children, tone = 'faint' }) {
@@ -112,7 +81,6 @@ export default function PastChats({ admin = false }) {
   const [query, setQuery] = useState('')
   const [shown, setShown] = useState(SHOW_PER_PAGE)
   const [hidden, setHidden] = useState(() => new Set())
-  const [pw, setPw] = useState(() => (admin ? readPw() : ''))
   const [view, setView] = useState('all')                // admin: all | hidden
   const [pending, setPending] = useState(null)           // id being hidden/unhidden
   const [adminErr, setAdminErr] = useState('')
@@ -120,10 +88,9 @@ export default function PastChats({ admin = false }) {
   const toggle = async (id, hide) => {
     setPending(id); setAdminErr('')
     try {
-      const d = await adminCall({ password: pw, action: hide ? 'hide' : 'unhide', ids: [id] })
+      const d = await adminCall({ action: hide ? 'hide' : 'unhide', ids: [id] })
       setHidden(new Set(d.ids))
     } catch (e) {
-      if (e.status === 401) { savePw(''); setPw('') }
       setAdminErr(e.message)
     } finally { setPending(null) }
   }
@@ -162,15 +129,6 @@ export default function PastChats({ admin = false }) {
       .filter(c => !q || [c.message, c.original?.text, c.ours?.text].some(t => (t || '').toLowerCase().includes(q)))
   }, [chats, query, hidden, admin, view])
 
-  if (admin && !pw) {
-    return (
-      <section className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
-        <a href="#" className="font-mono text-xs text-muted no-underline hover:text-lime">← back to the demo</a>
-        <h1 className="m-0 font-display text-[34px] font-bold tracking-[-.02em]">Admin</h1>
-        <Login onIn={setPw} />
-      </section>
-    )
-  }
 
   return (
     <section className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
@@ -196,8 +154,6 @@ export default function PastChats({ admin = false }) {
                   className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-1.5 font-mono text-xs text-muted hover:border-lime-deep hover:text-lime">
                   {view === 'all' ? 'show hidden only' : 'show all'}
                 </button>
-                <button type="button" onClick={() => { savePw(''); setPw('') }}
-                  className="cursor-pointer border-0 bg-transparent p-0 font-mono text-xs text-faint hover:text-red">log out</button>
               </>
             )}
           </div>
