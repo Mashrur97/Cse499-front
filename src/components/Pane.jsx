@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import LangTag from './LangTag.jsx'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -25,7 +26,7 @@ function renderMath(text) {
 
 export function Markdown({ text }) {
   const html = useMemo(() => {
-    const { src, out } = renderMath(text || '')
+    const { src, out } = renderMath((text || '').replace(/\ufffd+\s*$/, ''))   // older logs: half a character at the cut
     const safe = DOMPurify.sanitize(marked.parse(src))
     return out.length ? safe.replace(/KXMATH(\d+)END/g, (m, i) => out[+i] ?? m) : safe
   }, [text])
@@ -116,7 +117,10 @@ export default function Pane({ gpu, name, side, highlight, turns, streaming, sto
                     <div className="rounded-[14px] rounded-tr-[4px] border border-lime-deep bg-[#16210f] px-3.5 py-2 text-[15px] text-text">{t.user}</div>
                   </div>
                   <div className="flex max-w-[92%] min-w-0 flex-col items-start gap-1 self-start">
-                    <span className={`font-mono text-[11px] ${highlight ? 'text-lime' : 'text-faint'}`}>{who}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono text-[11px] ${highlight ? 'text-lime' : 'text-faint'}`}>{who}</span>
+                      {r.text && !(isLast && writing) && <LangTag text={r.text} />}
+                    </div>
                     <div className="min-w-0 max-w-full rounded-[14px] rounded-tl-[4px] border border-line bg-raise px-3.5 py-2.5">
                       {isLast ? (r.text ? <LiveReply text={r.text} writing={writing} /> : <span className="typing" aria-label="waiting for the reply"><i /><i /><i /></span>)
                               : (r.text ? <Markdown text={r.text} /> : <span className="font-mono text-sm text-faint">(no reply)</span>)}

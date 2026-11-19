@@ -3,6 +3,7 @@ import { LOGS_API, LOGS_REPO } from '../config.js'
 import { Markdown } from './Pane.jsx'
 import { ago } from '../useBackend.js'
 import { chatId } from '../chatId.js'
+import LangTag from './LangTag.jsx'
 
 const SESSIONS_PER_PAGE = 6          // one log file per Kaggle session; newest first
 const SHOW_PER_PAGE = 30
@@ -57,7 +58,7 @@ function Reply({ label, side, highlight }) {
   return (
     <div className={`flex min-w-0 flex-col gap-2 rounded-[10px] border bg-panel p-3.5 ${highlight ? 'border-lime-deep' : 'border-line'}`}>
       <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-faint">
-        <span className={highlight ? 'text-lime' : ''}>{label}</span>
+        <span className="flex items-center gap-2"><span className={highlight ? 'text-lime' : ''}>{label}</span><LangTag text={side?.text} /></span>
         <span className={side?.hit_limit ? 'text-amber' : ''}>{side?.tokens ?? 0} tok{side?.hit_limit ? ' · limit hit' : ''}</span>
       </div>
       <div className={`text-[14.5px] leading-[1.6] ${highlight ? 'text-text' : 'text-soft'}`}>
