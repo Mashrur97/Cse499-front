@@ -60,7 +60,7 @@ export default function App() {
     <div className="min-h-screen bg-ink">
       {/* ── nav ── */}
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
           <a href="#top" className="shrink-0 font-mono text-[15px] text-lime no-underline">banglish-4b<span className="hidden text-faint sm:inline"> / demo</span></a>
           <nav className="flex items-center gap-4 font-mono text-[13px] sm:gap-6">
             <a href="#history" className={`no-underline hover:text-lime ${page === 'history' ? 'text-lime' : 'text-muted'}`}>past_chats</a>
@@ -75,7 +75,7 @@ export default function App() {
       <section id="top" className="relative overflow-hidden">
         <Aurora />
         <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
-        <div className="relative mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
+        <div className="relative mx-auto flex max-w-[1440px] flex-col gap-5 px-4 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
           <span className="font-mono text-[13px] text-faint">// nsu cse 499 · qwen3-4b, before and after our training</span>
           <HeroTitle />
           <p className="m-0 max-w-[600px] text-[17px] leading-[1.6] text-muted">
@@ -89,7 +89,7 @@ export default function App() {
       </section>
 
       {/* ── live demo ── */}
-      <section id="try" className="mx-auto flex max-w-[1180px] scroll-mt-6 flex-col gap-4 px-4 pb-20 sm:px-8">
+      <section id="try" className="mx-auto flex max-w-[1440px] scroll-mt-6 flex-col gap-4 px-4 pb-20 sm:px-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="m-0 font-display text-[26px] font-bold">Live demo</h2>
           <div className="flex items-center gap-4">
@@ -172,7 +172,7 @@ export default function App() {
 
       {/* ── results ── */}
       <section id="results" className="border-t border-line">
-        <div className="mx-auto flex max-w-[1180px] scroll-mt-6 flex-col gap-5 px-4 py-16 sm:px-8">
+        <div className="mx-auto flex max-w-[1440px] scroll-mt-6 flex-col gap-5 px-4 py-16 sm:px-8">
           <h2 className="m-0 font-display text-[26px] font-bold">Results</h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {STATS.map(s => (
@@ -187,7 +187,7 @@ export default function App() {
       </section>
 
       {/* ── how it works ── */}
-      <section id="how" className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pb-20 sm:px-8">
+      <section id="how" className="mx-auto flex max-w-[1440px] flex-col gap-5 px-4 pb-20 sm:px-8">
         <h2 className="m-0 font-display text-[26px] font-bold">How it works</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
@@ -208,7 +208,7 @@ export default function App() {
       )}
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-[1180px] flex-wrap justify-between gap-3 px-4 py-6 font-mono text-xs text-faint sm:px-8">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 px-4 py-6 font-mono text-xs text-faint sm:px-8">
           <span onClick={secretTap}>NSU CSE 499 · Mashrur and team</span>
           <span>original: Qwen3-4B-Instruct-2507 · ours: + QLoRA adapter (CWH+-D)</span>
         </div>

@@ -131,7 +131,7 @@ export default function PastChats({ admin = false }) {
 
 
   return (
-    <section className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
+    <section className="mx-auto flex max-w-[1440px] flex-col gap-5 px-4 pt-12 pb-20 sm:px-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1.5">
           <a href="#" className="font-mono text-xs text-muted no-underline hover:text-lime">← back to the demo</a>

@@ -58,6 +58,7 @@ export default function Pane({ gpu, name, side, highlight, turns, streaming, sto
   const statusText = offline ? '' : stopped && !done && text ? `${tokens} tok · stopped by you` : hit_limit ? `${tokens} tok · limit hit` : done ? `${tokens} tok · stopped` : writing ? `${tokens} tok · writing` : ''
   const statusColor = offline ? 'text-faint' : hit_limit ? 'text-amber' : 'text-faint'
   const pct = certainty == null ? 0 : Math.round(certainty * 100)
+  const who = side === 'ours' ? 'ours' : 'qwen3-4b'
 
   // keep the newest message in view while it streams, unless the reader scrolled up
   const box = useRef(null), pinned = useRef(true)
@@ -78,7 +79,7 @@ export default function Pane({ gpu, name, side, highlight, turns, streaming, sto
 
       <div
         ref={box} onScroll={onScroll} aria-live="polite"
-        className={`h-[360px] overflow-y-auto px-[18px] py-4 text-[16px] leading-[1.65] sm:h-[440px] ${highlight ? 'text-text' : 'text-soft'}`}
+        className={`chat-scroll h-[300px] overflow-y-auto px-4 py-4 text-[15.5px] leading-[1.6] sm:h-[340px] ${highlight ? 'text-text' : 'text-soft'}`}
       >
         {turns.length ? (
           <div className="flex flex-col gap-4">
@@ -86,12 +87,18 @@ export default function Pane({ gpu, name, side, highlight, turns, streaming, sto
               const isLast = i === turns.length - 1
               const r = t[side]
               return (
-                <div key={i} className="flex flex-col gap-2.5">
-                  <div className="self-end max-w-[85%] rounded-[12px] rounded-br-[4px] bg-line px-3.5 py-2 text-[15px] text-text">{t.user}</div>
-                  <div className="min-w-0">
-                    {isLast ? (r.text ? <LiveReply text={r.text} writing={writing} /> : <span className="font-mono text-sm text-faint">{placeholder}</span>)
-                            : (r.text ? <Markdown text={r.text} /> : <span className="font-mono text-sm text-faint">(no reply)</span>)}
-                    {!isLast && r.hit_limit && <span className="mt-1 block font-mono text-xs text-amber">limit hit</span>}
+                <div key={i} className="flex flex-col gap-3">
+                  <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
+                    <span className="font-mono text-[11px] text-faint">you</span>
+                    <div className="rounded-[14px] rounded-tr-[4px] border border-lime-deep bg-[#16210f] px-3.5 py-2 text-[15px] text-text">{t.user}</div>
+                  </div>
+                  <div className="flex max-w-[92%] min-w-0 flex-col items-start gap-1 self-start">
+                    <span className={`font-mono text-[11px] ${highlight ? 'text-lime' : 'text-faint'}`}>{who}</span>
+                    <div className="min-w-0 max-w-full rounded-[14px] rounded-tl-[4px] border border-line bg-raise px-3.5 py-2.5">
+                      {isLast ? (r.text ? <LiveReply text={r.text} writing={writing} /> : <span className="typing" aria-label="waiting for the reply"><i /><i /><i /></span>)
+                              : (r.text ? <Markdown text={r.text} /> : <span className="font-mono text-sm text-faint">(no reply)</span>)}
+                      {!isLast && r.hit_limit && <span className="mt-1 block font-mono text-xs text-amber">limit hit</span>}
+                    </div>
                   </div>
                 </div>
               )

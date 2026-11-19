@@ -32,6 +32,14 @@ export function useBackend() {
 
   useEffect(() => { check(); const t = setInterval(check, POLL_MS); return () => clearInterval(t) }, [check])
 
+  // Once online, connect early to learn whether the backend supports conversations (v5) before the first message.
+  useEffect(() => {
+    if (link.state !== 'online' || !link.url) return
+    let alive = true
+    getClient(link.url).then(c => { if (alive) setMultiTurn(!!c.config?.dependencies?.some(d => d.api_name === 'chat_stream')) }).catch(() => {})
+    return () => { alive = false }
+  }, [link.state, link.url]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const getClient = useCallback(url => {
     if (client.current.url !== url) {
       client.current = { url, promise: Client.connect(url, { events: ['data', 'status'] }) }
