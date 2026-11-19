@@ -71,3 +71,7 @@ body { margin: 0; background: var(--color-ink); color: var(--color-text); font-f
 .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
 @keyframes dot { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .typing i { animation: none; opacity: .6; } }
+
+/* formulas */
+.md .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.md .katex { font-size: 1.05em; }

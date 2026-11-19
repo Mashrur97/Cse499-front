@@ -11,6 +11,7 @@
   "dependencies": {
     "@gradio/client": "^1.19.1",
     "dompurify": "^3.2.6",
+    "katex": "^0.16.11",
     "marked": "^15.0.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

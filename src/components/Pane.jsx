@@ -1,11 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 marked.setOptions({ breaks: true, gfm: true })
 
+// Math (the original model writes LaTeX: \[ … \], $$ … $$, \( … \)). Formulas are pulled out before Markdown
+// (which would eat the backslashes), rendered with KaTeX (trust off, so its output is safe), and put back after sanitizing.
+// An unclosed formula (still streaming) stays as plain text until its closing bracket arrives.
+const MATH = /\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\\(([\s\S]+?)\\\)|^[ \t]*\[[ \t]*\n([\s\S]*?\\[a-zA-Z][\s\S]*?)\n[ \t]*\][ \t]*$/gm
+function renderMath(text) {
+  const out = []
+  const src = text.replace(MATH, (m, a, b, c, d) => {
+    const tex = a ?? b ?? c ?? d
+    const display = c === undefined
+    try {
+      out.push(katex.renderToString(tex.trim(), { displayMode: display, throwOnError: false, strict: 'ignore', trust: false }))
+      return display ? `\n\nKXMATH${out.length - 1}END\n\n` : `KXMATH${out.length - 1}END`
+    } catch { return m }
+  })
+  return { src, out }
+}
+
 export function Markdown({ text }) {
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(text || '')), [text])
+  const html = useMemo(() => {
+    const { src, out } = renderMath(text || '')
+    const safe = DOMPurify.sanitize(marked.parse(src))
+    return out.length ? safe.replace(/KXMATH(\d+)END/g, (m, i) => out[+i] ?? m) : safe
+  }, [text])
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
