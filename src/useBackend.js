@@ -9,6 +9,7 @@ const EMPTY = { text: '', tokens: 0, done: false, hit_limit: false, certainty: n
 export function useBackend() {
   const [link, setLink] = useState({ state: 'checking', url: null, updated: null })
   const [turns, setTurns] = useState([])            // [{ user, original, ours }]
+  const [multiTurn, setMultiTurn] = useState(false) // true once we know the backend is v5
   const convId = useRef(newId())
   const [phase, setPhase] = useState('idle')        // idle | connecting | queued | streaming | done | error
   const [queuePos, setQueuePos] = useState(null)
@@ -55,10 +56,16 @@ export function useBackend() {
     setTurns(ts => [...ts, { user: msg, original: EMPTY, ours: EMPTY }])
     try {
       const c = await getClient(link.url)
-      const job = c.submit('/chat_stream', {
-        user_text: msg, base_sys: !!baseSys, history_json: JSON.stringify(history),
-        conversation_id: convId.current, turn: turnIndex,
-      })
+      // Backend v5 has /chat_stream (conversations). v4 only has /stream: then every message starts fresh.
+      const multi = !!c.config?.dependencies?.some(d => d.api_name === 'chat_stream')
+      setMultiTurn(multi)
+      if (!multi) setTurns(ts => ts.slice(-1))
+      const job = multi
+        ? c.submit('/chat_stream', {
+            user_text: msg, base_sys: !!baseSys, history_json: JSON.stringify(history),
+            conversation_id: convId.current, turn: turnIndex,
+          })
+        : c.submit('/stream', { user_text: msg, base_sys: !!baseSys })
       const stopped = await new Promise((resolve, reject) => {
         current.current = { job, finish: () => resolve(true) }
         // Consume in the background and settle on "complete": never `break` out of this loop (the client hangs on return()).
@@ -100,7 +107,7 @@ export function useBackend() {
   }, [])
 
   const busy = phase === 'connecting' || phase === 'queued' || phase === 'streaming'
-  return { link, turns, phase, queuePos, error, busy, ask, stop, newChat }
+  return { link, turns, phase, queuePos, error, busy, ask, stop, newChat, multiTurn }
 }
 
 function newId() {

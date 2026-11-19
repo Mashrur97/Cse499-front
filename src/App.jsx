@@ -87,8 +87,8 @@ export default function App() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="m-0 font-display text-[26px] font-bold">Live demo</h2>
           <div className="flex items-center gap-4">
-            <span className="font-mono text-xs text-faint">{turns.length ? `${turns.length} turn${turns.length > 1 ? 's' : ''} · each model sees its own history` : 'same message · same settings · greedy'}</span>
-            {turns.length > 0 && (
+            <span className="font-mono text-xs text-faint">{multiTurn && turns.length ? `${turns.length} turn${turns.length > 1 ? 's' : ''} · each model sees its own history` : 'same message · same settings · greedy'}</span>
+            {multiTurn && turns.length > 0 && (
               <button type="button" onClick={newChat} disabled={busy}
                 className="cursor-pointer rounded-md border border-line-2 bg-transparent px-3 py-1.5 font-mono text-xs text-muted transition hover:border-lime-deep hover:text-lime disabled:cursor-not-allowed disabled:opacity-40">
                 new_chat
@@ -118,7 +118,7 @@ export default function App() {
             <label htmlFor="msg" className="sr-only">Your message (Banglish)</label>
             <input
               id="msg" value={msg} maxLength={MAX_CHARS} onChange={e => setMsg(e.target.value)} disabled={offline}
-              placeholder={turns.length ? 'Reply…' : 'Ask anything in Banglish… e.g. ki obostha bhai?'} autoComplete="off"
+              placeholder={multiTurn && turns.length ? 'Reply…' : 'Ask anything in Banglish… e.g. ki obostha bhai?'} autoComplete="off"
               className="min-w-0 flex-1 border-0 bg-transparent py-3 font-mono text-[15px] text-text outline-none placeholder:text-faint disabled:opacity-50"
             />
           </div>
